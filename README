@@ -1,0 +1,5 @@
+Proccoli is a lightweight proxy server, ala http://www.charlesproxy.com/
+
+To use, "node server.js"
+Configure your browser to use http://localhost:8888 as the http proxy
+Point your browser to http://localhost:8889 for a live view of all http traffic

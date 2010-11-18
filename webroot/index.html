@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    body {
+      margin: 0px;
+      padding: 0px;
+      font: 10pt sans-serif;
+    }
+    H1 {
+      font-size: 12pt;
+      text-align: center;
+      margin: 0px;
+      padding: 4px;
+      color: #fff;
+      background-color: #050;
+      border-bottom: solid 1px #090;
+    }
+    #controls {
+      float: right;
+      border: solid 1px #ccc;
+      border-width: 0px 0px 1px 1px;
+      padding: 10px;
+      border-radius: 0px 0px 0px 8px;
+      background-color: #fff;
+      -webkit-box-shadow: 3px 3px 2px rgba(0,0,0,.4);
+      -moz-box-shadow: 3px 3px 2px rgba(0,0,0,.4);
+    }
+    UL {
+      margin: 0px;
+      padding: 0px;
+      margin-left: 1em;
+    }
+    LI {
+      margin: 0px;
+      padding: 1px 0px;
+      white-space: nowrap;
+      font: 10pt monospace;
+      list-style: none;
+    }
+    .host_requests LI {
+      font-size: 85%;
+    }
+    .hide_completed .host_requests LI {
+      display: none;
+    }
+    .host_requests LI.status_200 {color: #444;}
+    .host_requests LI.status_300 {color: #740;}
+    .host_requests LI.status_400 {color: #900;}
+    .host_requests LI.status_500 {color: #707;}
+    .host_requests LI.active {
+      display: block;
+      font-weight: bold;
+      background: url(images/loading.gif) no-repeat left center;
+      margin-left: -16px;
+      padding-left: 16px;
+    }
+    .host H2 {
+      cursor: pointer;
+      font-size: 12pt;
+      color: #666;
+    }
+    .host H2:hover {
+      color: #090;
+    }
+    .host LI {
+    }
+    .host.closed H2 {
+      font-weight: normal;
+    }
+    .host.closed LI {
+      display: none;
+    }
+    </style>
+  <head>
+<body>
+  <h1>Proccoli - A customizable web proxy for JS nerds</h1>
+  <div id="controls">
+    <button onclick="$('#hosts .host').remove()">Clear</button>
+    <br />
+    <label><input type="checkbox" onclick="$(document.body).toggleClass('hide_completed', this.checked)">Hide completed requests</label>
+  </div>
+
+  <ul id="hosts"></ul>
+
+  <!-- TEMPLATES -->
+  <div style="display:none">
+  <ul id="host_template" class="host">
+    <h2 class="host_name" onclick="toggle(this)">Host</h2>
+    <ul class="host_requests">
+    </ul>
+  </ul>
+
+  <script src="lib/jquery.min.js"></script>
+  <script src="lib/Dechunker.js"></script>
+  <script>
+    function toggle(el) {
+      var el = $(el);
+      el = el.closest('ul');
+      el.toggleClass('closed');
+    }
+
+    function init() {
+      var xhr = new XMLHttpRequest();
+      var dechunker = new Dechunker({
+        onMessage: function(msg) {
+          if (typeof(msg) == 'string') {
+            // Status messages. ignore for now.
+          } else {
+            var elId = 'el_' + msg.uid;
+            var el = $('#' + elId);
+
+            // Create elements needed to display the request
+            if (!el.length && msg.host && msg.url) {
+              // Create host list?
+              var hostId = msg.host.replace(/\W/g, '_');
+              var hostEl = $('#' + hostId);
+              if (!hostEl.length) {
+                hostEl = $('#host_template').clone();
+                hostEl.attr('id', hostId);
+                hostEl.children('h2').html(msg.host);
+                $('#hosts').append(hostEl);
+              }
+
+              // Create request item
+              var hostUL = hostEl.children('ul');
+              var el = $('<li id="' + elId + '">');
+              el.html(msg.url.replace(/[?#].*/, ''));
+              hostUL.append(el);
+            }
+
+            // Still no element? give up
+            if (!el.length) return;
+
+            if (msg.statusCode) {
+              var stat = 100*Math.floor(msg.statusCode/100);
+              el.get(0).className = 'status_' + stat;
+            }
+            el.toggleClass('active', msg.readyState < 4);
+          }
+        }
+      });
+      xhr.open('GET', '/listen');
+      xhr.onreadystatechange = function() {
+        dechunker.process(xhr);
+        if (xhr.readyState == 4) {
+          setTimeout(init, 1e3);
+        }
+      }
+      xhr.send();
+    }
+    setTimeout(init, 1e3);
+  </script>
+</body>
+</html>
